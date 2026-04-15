@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ballerina Spinner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #C9A0B0;
+      font-family: system-ui, sans-serif;
+    }
+    #stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 2rem;
+      user-select: none;
+    }
+    #ballerina-wrap {
+      cursor: pointer;
+      width: 180px;
+      height: 240px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    #ballerina {
+      width: 140px;
+      height: 220px;
+      transform-origin: center 82%;
+      filter: drop-shadow(0 4px 12px rgba(120,40,70,0.18));
+    }
+    #ballerina.spinning { animation: spin 0.42s cubic-bezier(0.4,0,0.2,1); }
+    #ballerina.jumping  { animation: jump 0.72s cubic-bezier(0.3,0,0.3,1); }
+    @keyframes spin {
+      0%   { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes jump {
+      0%   { transform: translateY(0) rotate(0deg) scaleX(1); }
+      15%  { transform: translateY(-10px) rotate(90deg) scaleX(0.88); }
+      35%  { transform: translateY(-65px) rotate(180deg) scaleX(0.82); }
+      50%  { transform: translateY(-78px) rotate(270deg) scaleX(0.88); }
+      65%  { transform: translateY(-52px) rotate(360deg) scaleX(0.95); }
+      85%  { transform: translateY(-12px) rotate(400deg) scaleX(1); }
+      100% { transform: translateY(0) rotate(360deg) scaleX(1); }
+    }
+    #counter {
+      font-size: 14px;
+      color: #7a3050;
+      background: rgba(255,255,255,0.35);
+      padding: 4px 14px;
+      border-radius: 20px;
+    }
+    #message {
+      font-size: 28px;
+      font-weight: 600;
+      color: #fff;
+      min-height: 38px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      text-align: center;
+      text-shadow: 0 1px 8px rgba(120,40,70,0.3);
+    }
+    #message.show { opacity: 1; }
+    #sparkles {
+      position: absolute;
+      pointer-events: none;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    .spark {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: sparkle 0.75s ease-out forwards;
+    }
+    @keyframes sparkle {
+      0%   { opacity: 1; transform: scale(1) translate(0,0); }
+      100% { opacity: 0; transform: scale(0) translate(var(--dx), var(--dy)); }
+    }
+    #hint { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+    #end-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      padding: 2.5rem 2rem;
+      animation: fadeIn 0.6s ease forwards;
+    }
+    #end-screen.show { display: flex; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    #end-card {
+      background: rgba(255,255,255,0.28);
+      border: 1.5px solid rgba(255,255,255,0.55);
+      border-radius: 24px;
+      padding: 2rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #end-title {
+      font-size: 32px;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 2px 12px rgba(120,40,70,0.3);
+      text-align: center;
+    }
+    #end-sub { font-size: 15px; color: rgba(255,255,255,0.85); text-align: center; }
+    #end-emoji { font-size: 48px; line-height: 1; }
+    #restart-btn {
+      margin-top: 8px;
+      padding: 12px 32px;
+      background: #E87BB0;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(180,60,100,0.3);
+      transition: transform 0.15s, background 0.15s;
+    }
+    #restart-btn:hover  { background: #D4537E; transform: scale(1.04); }
+    #restart-btn:active { transform: scale(0.97); }
+    .confetti-piece {
+      position: fixed;
+      border-radius: 2px;
+      opacity: 0;
+      pointer-events: none;
+      animation: confettiFall linear forwards;
+    }
+    @keyframes confettiFall {
+      0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+      100% { opacity: 0; transform: translateY(320px) rotate(720deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="message"></div>
+  <div id="ballerina-wrap" onclick="handleClick()" title="Click to spin!">
+    <div id="sparkles"></div>
+    <svg id="ballerina" viewBox="0 0 120 210" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="60" cy="200" rx="28" ry="5" fill="rgba(120,40,70,0.1)"/>
+      <ellipse cx="60" cy="19" rx="16" ry="15" fill="#6B3A2A"/>
+      <circle cx="60" cy="24" r="15" fill="#FDDBB4"/>
+      <ellipse cx="50" cy="28" rx="5" ry="3.5" fill="#F4A0B0" opacity="0.55"/>
+      <ellipse cx="70" cy="28" rx="5" ry="3.5" fill="#F4A0B0" opacity="0.55"/>
+      <ellipse cx="53.5" cy="23" rx="4" ry="4.5" fill="white"/>
+      <ellipse cx="66.5" cy="23" rx="4" ry="4.5" fill="white"/>
+      <circle cx="53.5" cy="23.5" r="2.8" fill="#5A3020"/>
+      <circle cx="66.5" cy="23.5" r="2.8" fill="#5A3020"/>
+      <circle cx="54.8" cy="22.2" r="1" fill="white"/>
+      <circle cx="67.8" cy="22.2" r="1" fill="white"/>
+      <path d="M49.5 18.5 Q53 16 57 18" stroke="#5A3020" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <path d="M63 18 Q66.5 16 70.5 18.5" stroke="#5A3020" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+      <ellipse cx="60" cy="28" rx="1.5" ry="1" fill="#E8A080" opacity="0.6"/>
+      <path d="M54 32 Q60 37 66 32" stroke="#D4708A" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+      <circle cx="60" cy="11" r="9" fill="#7A4030"/>
+      <circle cx="60" cy="9" r="6" fill="#8B4A38"/>
+      <ellipse cx="57" cy="7" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.18)" transform="rotate(-20,57,7)"/>
+      <ellipse cx="60" cy="17" rx="9" ry="3" fill="#E87BB0" opacity="0.7"/>
+      <path d="M52 12 Q56 8 60 12" fill="#F9B8D0" stroke="#E87BB0" stroke-width="0.5"/>
+      <path d="M68 12 Q64 8 60 12" fill="#F9B8D0" stroke="#E87BB0" stroke-width="0.5"/>
+      <circle cx="60" cy="12" r="2.5" fill="#E87BB0"/>
+      <rect x="57" y="37" width="6" height="8" rx="3" fill="#FDDBB4"/>
+      <path d="M40 62 Q40 44 60 44 Q80 44 80 62 L76 80 L44 80 Z" fill="#E87BB0"/>
+      <path d="M55 50 Q60 46 65 50 Q60 54 55 50Z" fill="white" opacity="0.3"/>
+      <circle cx="60" cy="56" r="2" fill="white" opacity="0.3"/>
+      <ellipse cx="60" cy="83" rx="36" ry="13" fill="#F5A8C8" opacity="0.95"/>
+      <ellipse cx="60" cy="87" rx="38" ry="11" fill="#F9BED5" opacity="0.9"/>
+      <ellipse cx="60" cy="92" rx="40" ry="10" fill="#FBCFDF" opacity="0.85"/>
+      <ellipse cx="60" cy="97" rx="38" ry="8" fill="#FDE0EA" opacity="0.8"/>
+      <circle cx="38" cy="85" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="52" cy="80" r="1.2" fill="white" opacity="0.6"/>
+      <circle cx="68" cy="80" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="82" cy="86" r="1.2" fill="white" opacity="0.6"/>
+      <circle cx="44" cy="93" r="1" fill="white" opacity="0.5"/>
+      <circle cx="76" cy="93" r="1" fill="white" opacity="0.5"/>
+      <path d="M44 56 Q30 40 20 28" stroke="#FDDBB4" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <circle cx="20" cy="28" r="4.5" fill="#FDDBB4"/>
+      <path d="M17 26 Q20 22 23 26" stroke="#F4B08A" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M76 56 Q92 50 102 40" stroke="#FDDBB4" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <circle cx="102" cy="40" r="4.5" fill="#FDDBB4"/>
+      <path d="M99 38 Q102 34 105 38" stroke="#F4B08A" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M52 96 Q48 124 44 152 Q42 160 37 167" stroke="#FDDBB4" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <path d="M68 96 Q72 120 76 148 Q78 158 83 167" stroke="#FDDBB4" stroke-width="7.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="35" cy="169" rx="10" ry="5.5" fill="#E87BB0" transform="rotate(-12,35,169)"/>
+      <rect x="26" y="166" width="15" height="4.5" rx="2" fill="#C9558A" transform="rotate(-12,33.5,168)"/>
+      <path d="M30 164 Q26 173 23 178" stroke="#F9B8D0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M40 165 Q43 173 45 178" stroke="#F9B8D0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="85" cy="169" rx="10" ry="5.5" fill="#E87BB0" transform="rotate(12,85,169)"/>
+      <rect x="79" y="166" width="15" height="4.5" rx="2" fill="#C9558A" transform="rotate(12,86.5,168)"/>
+      <path d="M80 165 Q77 173 75 178" stroke="#F9B8D0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M90 164 Q93 173 96 178" stroke="#F9B8D0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div id="counter">Spins: 0</div>
+  <div id="hint">Click her to spin! 🩰</div>
+</div>
+
+<div id="end-screen">
+  <div id="end-card">
+    <div id="end-emoji">🩰🌸✨</div>
+    <div id="end-title">Congrats!<br>The show is over!</div>
+    <div id="end-sub">She danced her heart out — 8 beautiful spins!</div>
+    <button id="restart-btn" onclick="restart()">Click to Restart</button>
+  </div>
+</div>
+
+<script>
+  let spinCount = 0;
+  let animating = false;
+  const bal = document.getElementById('ballerina');
+  const counter = document.getElementById('counter');
+  const message = document.getElementById('message');
+  const hint = document.getElementById('hint');
+  const sparklesEl = document.getElementById('sparkles');
+  const stage = document.getElementById('stage');
+  const endScreen = document.getElementById('end-screen');
+  const sparkColors = ['#fff','#F9D0E5','#FFE4F0','#FADADF','#F9B8D0','#ffe9f3','#ffd6eb'];
+  const confettiColors = ['#E87BB0','#fff','#FADADF','#C9A0B0','#F9B8D0','#D4537E','#FBCFDF'];
+
+  function spawnSparks(count) {
+    sparklesEl.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const s = document.createElement('div');
+      s.className = 'spark';
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 45 + Math.random() * 65;
+      const size = 5 + Math.random() * 8;
+      s.style.cssText = `left:${50+(Math.random()-0.5)*60}%;top:${30+(Math.random()-0.5)*40}%;background:${sparkColors[Math.floor(Math.random()*sparkColors.length)]};--dx:${Math.cos(angle)*dist}px;--dy:${Math.sin(angle)*dist}px;animation-delay:${Math.random()*0.2}s;width:${size}px;height:${size}px;`;
+      sparklesEl.appendChild(s);
+    }
+    setTimeout(() => { sparklesEl.innerHTML = ''; }, 950);
+  }
+
+  function spawnConfetti() {
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      const size = 6 + Math.random() * 8;
+      c.style.cssText = `left:${Math.random()*100}%;top:${-10-Math.random()*30}px;width:${size}px;height:${size}px;background:${confettiColors[Math.floor(Math.random()*confettiColors.length)]};animation-duration:${1.2+Math.random()*1.2}s;animation-delay:${Math.random()*0.5}s;border-radius:${Math.random()>0.5?'50%':'2px'};`;
+      document.body.appendChild(c);
+    }
+    setTimeout(() => { document.querySelectorAll('.confetti-piece').forEach(e => e.remove()); }, 3000);
+  }
+
+  function showMessage(text) {
+    message.textContent = text;
+    message.classList.add('show');
+    setTimeout(() => { message.classList.remove('show'); }, 1800);
+  }
+
+  function showEndScreen() {
+    stage.style.display = 'none';
+    endScreen.classList.add('show');
+    spawnConfetti();
+    setTimeout(spawnConfetti, 800);
+  }
+
+  function restart() {
+    spinCount = 0;
+    animating = false;
+    counter.textContent = 'Spins: 0';
+    hint.textContent = 'Click her to spin! 🩰';
+    message.classList.remove('show');
+    bal.classList.remove('spinning', 'jumping');
+    endScreen.classList.remove('show');
+    stage.style.display = 'flex';
+    spawnConfetti();
+  }
+
+  function handleClick() {
+    if (animating) return;
+    animating = true;
+    spinCount++;
+    counter.textContent = `Spins: ${spinCount}`;
+
+    if (spinCount === 8) {
+      bal.classList.remove('spinning', 'jumping');
+      void bal.offsetWidth;
+      bal.classList.add('jumping');
+      spawnSparks(30);
+      showMessage('Beautiful! ✨');
+      bal.addEventListener('animationend', () => {
+        bal.classList.remove('jumping');
+        animating = false;
+        setTimeout(showEndScreen, 400);
+      }, { once: true });
+    } else if (spinCount > 3) {
+      bal.classList.remove('spinning', 'jumping');
+      void bal.offsetWidth;
+      bal.classList.add('jumping');
+      spawnSparks(26);
+      showMessage('Beautiful! ✨');
+      if (spinCount === 7) hint.textContent = 'One last spin! 🌟';
+      bal.addEventListener('animationend', () => { bal.classList.remove('jumping'); animating = false; }, { once: true });
+    } else {
+      bal.classList.remove('spinning', 'jumping');
+      void bal.offsetWidth;
+      bal.classList.add('spinning');
+      spawnSparks(10);
+      if (spinCount === 1) showMessage('Spin! 💫');
+      else if (spinCount === 2) showMessage('Again! 🌀');
+      else if (spinCount === 3) showMessage('One more... 🌸');
+      if (spinCount === 3) hint.textContent = 'One more spin for a surprise! ✨';
+      bal.addEventListener('animationend', () => { bal.classList.remove('spinning'); animating = false; }, { once: true });
+    }
+  }
+</script>
+</body>
+</html>
